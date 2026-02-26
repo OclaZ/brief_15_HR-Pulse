@@ -1,0 +1,14 @@
+fastapi
+uvicorn 
+pydantic 
+scikit-learn 
+pandas 
+joblib 
+sqlalchemy 
+python-dotenv
+tqdm
+sqlalchemy
+pyodbc
+python-multipart
+
+

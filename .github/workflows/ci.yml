@@ -1,0 +1,77 @@
+name: CI - HR Pulse Quality Gate
+
+# La pipeline se déclenche à chaque push ou pull request sur la branche main
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ==========================================
+  # 🧹 JOB 1 : Linting & Qualité (Ruff)
+  # ==========================================
+  lint:
+    name: Job 1 - Linting & Qualité
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          
+      - name: 📦 Installation de Ruff
+        run: pip install ruff
+        
+      - name: 🔍 Vérification de la conformité du code
+        # Ruff va scanner le dossier backend. S'il y a des erreurs de syntaxe ou des variables non utilisées, il fait échouer la pipeline.
+        run: ruff check backend/
+
+  # ==========================================
+  # 🧪 JOB 2 : Tests Unitaires (Pytest)
+  # ==========================================
+  test:
+    name: Job 2 - Tests Unitaires
+    needs: lint # Ce job attend que le Job 1 soit validé
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          
+      - name: 📦 Installation des dépendances et outils de test
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest httpx
+          
+      - name: 🚦 Exécution de Pytest
+        env:
+          # Permet à pytest de trouver main.py
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: python -m pytest backend/tests/
+
+  # ==========================================
+  # 🐳 JOB 3 : Build Docker (Vérification)
+  # ==========================================
+  build-docker:
+    name: Job 3 - Build Images Docker
+    needs: test # Ce job attend que le Job 2 soit validé
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build Backend Image
+        # On construit l'image pour vérifier qu'il n'y a pas d'erreur de dépendance
+        run: docker build -t hr-pulse-backend:test ./backend
+
+      - name: 🐳 Build Frontend Image
+        # Idem pour le frontend (Next.js va vérifier les erreurs TypeScript au passage)
+        run: docker build -t hr-pulse-frontend:test ./frontend

@@ -1,0 +1,25 @@
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hr_pulse_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env # Injecte dynamiquement ta chaîne de connexion Azure SQL
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hr_pulse_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend # S'assure que le backend démarre avant le frontend
+    restart: unless-stopped

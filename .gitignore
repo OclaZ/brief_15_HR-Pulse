@@ -1,0 +1,30 @@
+infra/.terraform/providers/registry.terraform.io/hashicorp/azurerm/3.117.1/windows_amd64/terraform-provider-azurerm_v3.117.1_x5.exe
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Secrets
+.env
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+.docker/
+test_ai.py
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/terraform.tfstate
+infra/.terraform/providers/registry.terraform.io/hashicorp/azurerm/3.117.1/windows_amd64/terraform-provider-azurerm_v3.117.1_x5.exe
+infra/.terraform/providers/registry.terraform.io/hashicorp/azurerm/4.61.0/windows_amd64/terraform-provider-azurerm_v4.61.0_x5.exe
