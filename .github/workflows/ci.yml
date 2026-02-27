@@ -53,6 +53,8 @@ jobs:
           
       - name: 🚦 Exécution de Pytest
         working-directory: ./backend
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
         run: python -m pytest tests/
 
   # ==========================================
