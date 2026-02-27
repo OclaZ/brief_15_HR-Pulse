@@ -6,8 +6,16 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
-from sqlalchemy import create_engine, text # NOUVEAU
-from dotenv import load_dotenv # NOUVEAU
+from sqlalchemy import create_engine
+from dotenv import load_dotenv 
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
 # Charge les variables d'environnement
 load_dotenv()
@@ -20,7 +28,23 @@ FEATURES_PATH = os.path.join(BASE_DIR, "ml", "models", "model_features.pkl")
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
+# 1. Configuration de l'identité du service
+resource = Resource(attributes={"service.name": "hr-pulse-backend"})
+provider = TracerProvider(resource=resource)
+
+# 2. Configuration de l'exportateur (vers Jaeger)
+# S'il ne trouve pas la variable (ex: en local), il vise localhost par défaut
+otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True))
+provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
+
 app = FastAPI(title="HR-Pulse API")
+
+FastAPIInstrumentor.instrument_app(app)
+
+# Cela va chronométrer tes appels sortants vers Azure AI (car le SDK Azure utilise 'requests' en arrière-plan)
+RequestsInstrumentor().instrument()
 
 app.add_middleware(
     CORSMiddleware,

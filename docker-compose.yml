@@ -1,5 +1,12 @@
 
 services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686" # 💻 L'interface Web pour visualiser les traces
+      - "4317:4317"   # 📡 Le port OTLP gRPC (pour recevoir les données)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
   backend:
     build:
       context: ./backend
@@ -7,6 +14,11 @@ services:
     container_name: hr_pulse_backend
     ports:
       - "8000:8000"
+    environment:
+      # On dit au backend d'envoyer les traces au conteneur Jaeger
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      - jaeger
     env_file:
       - .env # Injecte dynamiquement ta chaîne de connexion Azure SQL
     restart: unless-stopped
