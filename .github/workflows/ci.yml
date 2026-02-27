@@ -52,9 +52,7 @@ jobs:
           pip install pytest httpx
           
       - name: 🚦 Exécution de Pytest
-        env:
-          # Permet à pytest de trouver main.py
-          PYTHONPATH: ./backend
+        working-directory: ./backend
         run: python -m pytest tests/
 
   # ==========================================
