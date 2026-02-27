@@ -54,8 +54,8 @@ jobs:
       - name: 🚦 Exécution de Pytest
         env:
           # Permet à pytest de trouver main.py
-          PYTHONPATH: ${{ github.workspace }}/backend
-        run: python -m pytest backend/tests/
+          PYTHONPATH: ./backend
+        run: python -m pytest tests/
 
   # ==========================================
   # 🐳 JOB 3 : Build Docker (Vérification)
