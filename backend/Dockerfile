@@ -22,13 +22,10 @@ RUN pip install pytest httpx
 # 4. Copie de tout le code source
 COPY . .
 
-# 🔴 FIX DOCKER : On indique à Python que le dossier /app est la racine du projet
 ENV PYTHONPATH=/app
 
-# 🛡️ BARRIÈRE DE SÉCURITÉ (PHASE 6)
-# Docker va exécuter les tests. Si un test échoue, la création de l'image est annulée !
-RUN python -m pytest tests/
+RUN DATABASE_URL="sqlite:///:memory:" python -m pytest tests/
 
 # 5. Configuration finale
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
