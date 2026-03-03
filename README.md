@@ -44,7 +44,7 @@
 
 Le pipeline ingère un fichier `jobs.csv`, extrait automatiquement les compétences clés via **Azure AI Language (NER)**, prédit les fourchettes salariales grâce à un modèle de régression, et expose l'ensemble via une API FastAPI consommée par une interface Next.js.
 
-> **Projet Fil Rouge** · Simplon Maghreb · Février 2026
+> **Projet Jury Blanc** · Simplon Maghreb · Février 2026
 
 ---
 
