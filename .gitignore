@@ -28,3 +28,4 @@ infra/.terraform.lock.hcl
 infra/terraform.tfstate
 infra/.terraform/providers/registry.terraform.io/hashicorp/azurerm/3.117.1/windows_amd64/terraform-provider-azurerm_v3.117.1_x5.exe
 infra/.terraform/providers/registry.terraform.io/hashicorp/azurerm/4.61.0/windows_amd64/terraform-provider-azurerm_v4.61.0_x5.exe
+explication/

@@ -3,16 +3,23 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 import joblib
+import os
 
-print("⏳ Chargement des données pour l'entraînement...")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "data", "cleaned-data.csv")
+
+print("⏳ Chargement et préparation des données...")
 df = pd.read_csv("data/cleaned-data.csv")
 
-# 1. Nettoyage de la note d'entreprise (Rating)
+# 1. Nettoyage de la note (Rating)
 df['Rating'] = df['Rating'].replace(-1.0, np.nan)
 df['Rating'] = df['Rating'].fillna(df['Rating'].median())
 
-# 2. Extraction des compétences (Features)
+# 2. Extraction des compétences (Features binaires manuelles)
 TECH_SKILLS = [
     "python", "sql", "aws", "machine learning", "deep learning", "hadoop", 
     "spark", "java", "c++", "tableau", "power bi", "excel", "nosql", 
@@ -24,48 +31,53 @@ def extract_skills_list(description):
     return [skill for skill in TECH_SKILLS if skill in desc]
 
 df['skills_list'] = df['Job Description'].apply(extract_skills_list)
-
 for skill in TECH_SKILLS:
     df[f"skill_{skill}"] = df['skills_list'].apply(lambda x: 1 if skill in x else 0)
 
-# 3. Définition des Features (X) et de la Target (y)
-feature_cols = ['Rating'] + [f"skill_{skill}" for skill in TECH_SKILLS]
+# 3. Sélection des Features
+# On ajoute 'Job Title' et 'Location' pour utiliser le OneHotEncoder
+categorical_features = ['Job Title', 'Location']
+numeric_features = ['Rating'] + [f"skill_{skill}" for skill in TECH_SKILLS]
 
-df = df.dropna(subset=['Average_Salary'])
+df = df.dropna(subset=['Average_Salary'] + categorical_features)
 
-X = df[feature_cols]
+X = df[categorical_features + numeric_features]
 y = df['Average_Salary']
 
-# --- NOUVEAU : Séparation Train / Test ---
-# On garde 20% des données uniquement pour l'évaluation
+# Séparation Train / Test
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 4. Entraînement de l'algorithme "Random Forest" (sur X_train uniquement)
-print("🧠 Entraînement de l'IA en cours (RandomForest)...")
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+# --- CONFIGURATION DU ONEHOTENCODER ---
+# handle_unknown='ignore' est crucial pour ne pas planter si un nouveau titre de poste arrive en prod
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features),
+        ('num', 'passthrough', numeric_features)
+    ]
+)
 
-# --- NOUVEAU : Évaluation du modèle (sur X_test) ---
-print("\n📊 Évaluation des performances du modèle :")
-predictions = model.predict(X_test)
+# --- CRÉATION DU PIPELINE ---
+# Le pipeline enchaîne automatiquement l'encodage et l'entraînement
+model_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1))
+])
 
-# Calcul des métriques
+print("🧠 Entraînement du Pipeline (Encoding + Random Forest)...")
+model_pipeline.fit(X_train, y_train)
+
+# 4. Évaluation
+print("\n📊 Performances du modèle :")
+predictions = model_pipeline.predict(X_test)
 mae = mean_absolute_error(y_test, predictions)
-mse = mean_squared_error(y_test, predictions)
-rmse = np.sqrt(mse)
 r2 = r2_score(y_test, predictions)
 
-# Affichage (On multiplie par 1000 car le salaire est en K$)
-print(f"🔹 MAE (Erreur Absolue Moyenne) : ± {mae * 1000:,.2f} $")
-print(f"🔹 RMSE (Erreur Quadratique Moyenne) : ± {rmse * 1000:,.2f} $")
-print(f"🔹 R² (Score de précision) : {r2:.4f}")
-print("-" * 50)
+print(f"🔹 MAE : ± {mae * 1000:,.2f} $")
+print(f"🔹 R² (Précision) : {r2:.4f}")
 
-# 5. Sauvegarde du modèle et des noms de colonnes
-# Tu peux choisir d'entraîner le modèle sur tout X une fois que tu es satisfait des métriques,
-# mais ici on sauvegarde celui entraîné sur le Train set pour être cohérent.
-joblib.dump(model, "models/salary_predictor.pkl")
-joblib.dump(feature_cols, "models/model_features.pkl")
+# 5. Sauvegarde UNIQUE
+# On sauvegarde le PIPELINE entier. Comme ça, en prod, tu n'as qu'à 
+# charger un seul fichier qui s'occupe de l'encodage et de la prédiction.
+joblib.dump(model_pipeline, "models/salary_pipeline.pkl")
 
-print("✅ SUCCÈS : Le modèle a été sauvegardé sous 'models/salary_predictor.pkl'")
-print("✅ SUCCÈS : Les features ont été sauvegardées sous 'models/model_features.pkl'")
+print("\n✅ SUCCÈS : Le pipeline complet est sauvegardé sous 'models/salary_pipeline.pkl'")
